@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"
+    integrity="sha256-kLaT2GOSpHechhsozzB+flnD+zUyjE2LlfWPgU04xyI="
+    crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"
+    integrity="sha256-WBkoXOwTeyKclOHuWtc+i2uENFpDZ9YPdf5Hf+D7ewM="
+    crossorigin=""></script>
+    <link rel="stylesheet" href="{{url_for('static', filename='bootstrap/css/bootstrap.min.css')}}">
+    <link rel="stylesheet" href="{{url_for('static', filename='css/index.css')}}">
+    <title>Listes des routes</title>
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col-md-6">
+                <h1>Listes des routes :</h1>
+                <p>Les routes present ici ont des degradations.</p>
+                <form action="/" method="POST">
+                    <select name="idRoute" id="" class="form-select">
+                        {% for route in listes: %}
+                        <option value="{{route.get_id_route()}}">{{route.get_id_route()}}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="submit" value="Voir plus" class="btn btn-info my-4">
+                </form>
+
+                <!-- Button trigger modal -->
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal">
+                    Ajouter partie detruit
+                </button>
+                
+                <!-- Modal -->
+                <form action="/insertion" method="POST" class="formulaire">
+                    <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+                        <div class="modal-dialog  modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="exampleModalLabel">Ajout partie detruit</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="form-group mt-3">
+                                        <h4>Ajouter nouveau route detruit</h4>
+                                        <label for="routeId" class="form-label">Route</label>
+                                        <select class="form-select" name="route" id="routeId">
+                                            {% for lalana in routes: %}
+                                                <option value="{{lalana}}">{{lalana}}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="form-group mt-3">
+                                        <label for="niveau" class="form-label">Niveau</label>
+                                        <input class="form-control"type="number" name="niveau" id="niveau" value="5">
+                                    </div>
+                                    <div class="row">
+                                        <div class="form-group mt-3 col-md-6">
+                                            <label for="pkd" class="form-label">PK debut</label>
+                                            <input class="form-control" type="number" name="pk_debut" id="pkd" value="0">
+                                        </div>
+                                        <div class="form-group mt-3 col-md-6">
+                                            <label for="pkf" class="form-label">PK fin</label>
+                                            <input class="form-control" type="number" name="pk_fin" id="pkf" value="100">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    <input type="submit" value="Valider" class="btn btn-info">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+
+
+                {% if road != None :%}
+                    <h2>Détail de degradation</h2>
+                    <ul>
+                        <li><strong>Route National : {{road.get_id_route()}}</strong></li>
+                        <li>Longueur : {{round(road.get_longueur(), 1)}} Km</li>
+                        <li>Largeur : {{round(road.get_largeur(), 1)}} m</li>
+                        <li>pk debut : {{int(road.get_start_km())}}</li>
+                        <li>pk debut : {{int(road.get_end_km())}}</li>
+                    </ul>
+                    <p>Prix de revient du reparation : {{road.display_reparation_price()}} Euro</p>
+                    <p>Temps du reparation : {{road.display_reparation_duration()}}</p>
+                    <h3>Detail des reparations</h3>
+                    <table class="table">
+                        <tr>
+                            <th>Debut</th>
+                            <th>Fin</th>
+                            <th>Niveau</th>
+                            <th>Prix</th>
+                            <th>Duree</th>
+                            <th></th>
+                        </tr>
+                        {% for degat in road.get_degradations(): %}
+                            <tr>
+                                <td>{{degat.get_pk_debut()}}</td>
+                                <td>{{degat.get_pk_fin()}}</td>
+                                <td>{{degat.get_niveau()}}</td>
+                                <td>{{degat.display_reparation_price(rapport)}}</td>
+                                <td>{{degat.display_reparation_duration(rapport)}}</td>
+                                <td><a href="/delete?indice={{degat.get_id_degradation()}}" class="btn btn-danger btn-sm">X</a></td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                {% endif %}
+            </div>
+            <div class="col-md-6 map">
+                <div id="map"></div>
+                
+            </div>
+        </div>
+    </div>
+    <script charset="UTF-8">
+        {% if road != None : %}
+        
+            var geo = JSON.parse({{geoJSON|tojson}})
+            var map =  L.map('map').setView([{{longitude}}, {{latitude}}], 10);
+
+            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            }).addTo(map);
+
+            var myStyle = {
+                "color" : "green",
+                "weight" : 2,
+                "opacity" : 0.5
+            };
+
+            var degatStyle = {
+                "color" : "red",
+                "weight" : 2,
+                "opacity" : 0.5
+            };
+
+            L.geoJSON(geo, {
+                style : myStyle
+            }).addTo(map);
+
+            {% for deg in degats: %}
+                L.geoJSON(JSON.parse({{ deg.get_degradation_Area()|tojson }}), {
+                    style : degatStyle
+                }).addTo(map);
+            {% endfor %}
+
+        {%endif%}
+    </script>
+    <script src="{{url_for('static', filename='bootstrap/js/bootstrap.bundle.min.js')}}"></script>
+</body>
+</html>
